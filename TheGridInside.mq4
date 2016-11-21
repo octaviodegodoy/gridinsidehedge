@@ -64,8 +64,10 @@ double lastHedgeBuyTarget=9999;
 double lastHedgeSellTarget=-9999;
 bool hedgeMode=false;
 int totalHedgeOrders=0;
-double HedgeSellLevel=0;
-double HedgeBuyLevel=0;
+double hedgeSellLevel=0;
+double hedgeBuyLevel=0;
+extern double hedgeProfit = 10;
+
 
 
 // Order accounting 
@@ -476,8 +478,8 @@ void DisplayObjects()
    HORIZONTAL_LINE("TGI_BUY_LIMIT_LEVEL",priceLimitBuy,STYLE_SOLID,1,clrBlueViolet);
    
    
-   HORIZONTAL_LINE("TGI_HEDGE_SELL_LEVEL",HedgeSellLevel,STYLE_SOLID,1,clrBlueViolet);
-   HORIZONTAL_LINE("TGI_HEDGE_BUY_LEVEL",HedgeBuyLevel,STYLE_SOLID,1,clrBlueViolet);
+   HORIZONTAL_LINE("TGI_HEDGE_SELL_LEVEL",hedgeSellLevel,STYLE_SOLID,5,clrOrange);
+   HORIZONTAL_LINE("TGI_HEDGE_BUY_LEVEL",hedgeBuyLevel,STYLE_SOLID,5,clrLawnGreen);
 
 
    if(AccountStopoutMode()==0)
@@ -807,6 +809,7 @@ void HandleCloseOrder()
         {
          
          CloseBuyOrders();
+         SystemAccounting();
          
         }
 
@@ -815,10 +818,11 @@ void HandleCloseOrder()
         {
         
          CloseSellOrders();
+         SystemAccounting();
          
         }
         
-        SystemAccounting();
+        
 
      }
 
@@ -1162,10 +1166,10 @@ void UpdateHedgeLevels()
 
    double priceAsk=MarketInfo(NULL,MODE_ASK);
    double hedgeDistance = MathAbs(buyWeightedAverage - sellWeightedAverage);
-   HedgeSellLevel = sellWeightedAverage + 2*hedgeDistance;
-   HedgeBuyLevel = buyWeightedAverage - 2*hedgeDistance;
+   hedgeSellLevel = sellWeightedAverage + 2*hedgeDistance;
+   hedgeBuyLevel = buyWeightedAverage - 2*hedgeDistance;
 
-   if(priceAsk<=HedgeBuyLevel)
+   if(priceAsk<=hedgeBuyLevel)
      {
 
       if(hedgeBuyPriceTarget>(priceAsk+(minGridSpace+pipStep)*myPoint))
@@ -1183,7 +1187,7 @@ void UpdateHedgeLevels()
 
    double priceBid=MarketInfo(NULL,MODE_BID);
 
-   if(priceBid>=HedgeSellLevel)
+   if(priceBid>=hedgeSellLevel)
      {
 
       if(hedgeSellPriceTarget<(priceBid-(minGridSpace+pipStep)*myPoint))
@@ -1313,18 +1317,7 @@ void HandleHedgeOrders()
    bool sellLock=  sumSellLots>sumBuyLots;
    bool buyLock = sumBuyLots>sumSellLots;
    
-   double marginLevel=AccountInfoDouble(ACCOUNT_MARGIN_LEVEL);
-
-   bool hitMarginLimit=(marginLevel>0) && (marginLevel<marginLevelLimit);
-   
-   if(hitMarginLimit)
-   {
-  // lockMode = false;
-   }
-   
-   
-
-
+      
    if(!lockMode)
      {
 
@@ -1387,7 +1380,12 @@ void HandleHedgeOrders()
 
       // Adjust hedge levels
       UpdateHedgeLevels();
-
+      
+      bool hedgeTarget = (sellWeightedAverage - buyWeightedAverage) > hedgeProfit;
+      
+      if(!hedgeTarget)
+      {
+      
       double priceAsk=MarketInfo(NULL,MODE_ASK);
       priceAsk=NormalizeDouble(priceAsk,digits);
      
@@ -1440,6 +1438,10 @@ void HandleHedgeOrders()
 
      } 
 
+      
+      }
+
+      
   }
 //+------------------------------------------------------------------+
 //|                                                                  |
